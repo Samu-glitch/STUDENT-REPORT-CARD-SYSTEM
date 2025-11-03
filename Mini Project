@@ -1,0 +1,156 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <iomanip>
+using namespace std;
+
+class Student {
+    int rollNo;
+    string name;
+    float marks[3];
+    float total, percentage;
+    char grade;
+
+public:
+    Student() {}
+
+    void input() {
+        cout << "Enter Roll No: ";
+        cin >> rollNo;
+        cin.ignore();
+        cout << "Enter Name: ";
+        getline(cin, name);
+        cout << "Enter marks in 3 subjects: ";
+        total = 0;
+        for (int i = 0; i < 3; i++) {
+            cin >> marks[i];
+            total += marks[i];
+        }
+        percentage = total / 3;
+        if (percentage >= 90)
+            grade = 'A';
+        else if (percentage >= 75)
+            grade = 'B';
+        else if (percentage >= 60)
+            grade = 'C';
+        else if (percentage >= 45)
+            grade = 'D';
+        else
+            grade = 'F';
+    }
+
+    void display() const {
+        cout << left << setw(10) << rollNo << setw(20) << name
+             << setw(10) << total << setw(10) << percentage
+             << setw(10) << grade << endl;
+    }
+
+    int getRoll() const { return rollNo; }
+
+    void saveToFile(ofstream &out) const {
+        out << rollNo << "," << name << "," << marks[0] << "," << marks[1] << ","
+            << marks[2] << "," << total << "," << percentage << "," << grade << "\n";
+    }
+
+    static Student fromString(const string &line) {
+        Student s;
+        size_t p1, p2 = -1;
+        vector<string> parts;
+        for (int i = 0; i < 8; i++) {
+            p1 = line.find(',', p2 + 1);
+            if (p1 == string::npos) parts.push_back(line.substr(p2 + 1));
+            else parts.push_back(line.substr(p2 + 1, p1 - p2 - 1));
+            p2 = p1;
+        }
+        s.rollNo = stoi(parts[0]);
+        s.name = parts[1];
+        s.marks[0] = stof(parts[2]);
+        s.marks[1] = stof(parts[3]);
+        s.marks[2] = stof(parts[4]);
+        s.total = stof(parts[5]);
+        s.percentage = stof(parts[6]);
+        s.grade = parts[7][0];
+        return s;
+    }
+};
+
+class ReportSystem {
+    vector<Student> students;
+
+public:
+    void addStudent() {
+        Student s;
+        s.input();
+        students.push_back(s);
+
+        // ✅ Save immediately after adding
+        ofstream out("students.txt", ios::app);
+        s.saveToFile(out);
+        out.close();
+
+        cout << "Student record added and saved successfully!\n";
+    }
+
+    void displayAll() {
+        if (students.empty()) {
+            cout << "No records found!\n";
+            return;
+        }
+        cout << left << setw(10) << "RollNo" << setw(20) << "Name"
+             << setw(10) << "Total" << setw(10) << "Percent" << setw(10) << "Grade" << endl;
+        cout << "-------------------------------------------------------------\n";
+        for (const auto &s : students)
+            s.display();
+    }
+
+    void searchStudent() {
+        int r;
+        cout << "Enter Roll No to search: ";
+        cin >> r;
+        for (const auto &s : students) {
+            if (s.getRoll() == r) {
+                cout << "\nRecord Found:\n";
+                cout << left << setw(10) << "RollNo" << setw(20) << "Name"
+                     << setw(10) << "Total" << setw(10) << "Percent" << setw(10) << "Grade" << endl;
+                s.display();
+                return;
+            }
+        }
+        cout << "Record not found!\n";
+    }
+
+    void loadData() {
+        ifstream in("students.txt");
+        string line;
+        while (getline(in, line)) {
+            if (!line.empty())
+                students.push_back(Student::fromString(line));
+        }
+        in.close();
+    }
+};
+
+int main() {
+    ReportSystem rs;
+    rs.loadData();  // ✅ Automatically load saved data
+    int choice;
+    while (true) {
+        cout << "\n========= STUDENT REPORT CARD SYSTEM =========";
+        cout << "\n1. Add Student Record";
+        cout << "\n2. Display All Records";
+        cout << "\n3. Search Student by Roll No";
+        cout << "\n4. Exit";
+        cout << "\nEnter choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: rs.addStudent(); break;
+            case 2: rs.displayAll(); break;
+            case 3: rs.searchStudent(); break;
+            case 4:
+                cout << "Exiting... Data already saved permanently.\n";
+                return 0;
+            default: cout << "Invalid choice!\n";
+        }
+    }
+}
